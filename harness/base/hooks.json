@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "searcher",
+        "hooks": [{"type": "command", "command": "python3 scripts/check_sources.py"}]
+      }
+    ]
+  }
+}

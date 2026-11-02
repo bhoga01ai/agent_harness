@@ -1,0 +1,22 @@
+[project]
+name = "agent-harness"
+version = "0.1.0"
+description = "Google ADK web-search agent improved with Harness² (google-research/harness2)"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "google-adk>=2.6",
+    "harness2",
+]
+
+[project.scripts]
+improve-harness = "harness_loop.improve_harness:main"
+
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["harness_loop*", "search_agent*"]
+
+[tool.uv.sources]
+harness2 = { git = "https://github.com/google-research/harness2", rev = "1cfe254e8d25b15f37048c3730134686abe60335" }

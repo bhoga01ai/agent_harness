@@ -1,0 +1,36 @@
+[
+  {
+    "id": "tech-01",
+    "domain": "tech",
+    "question": "What is the latest stable release of the Python programming language, when was it released, and what are two notable new features in it?"
+  },
+  {
+    "id": "tech-02",
+    "domain": "tech",
+    "question": "What is the newest Gemini model available through the Gemini API, and what is its context window size?"
+  },
+  {
+    "id": "science-01",
+    "domain": "science",
+    "question": "What is the current best estimate of the age of the universe from the Planck mission, and how precise is it?",
+    "reference": "About 13.8 billion years: 13.787 ± 0.020 billion years from Planck 2018 results."
+  },
+  {
+    "id": "science-02",
+    "domain": "science",
+    "question": "Which spacecraft is the farthest human-made object from Earth, and roughly how far away is it now?",
+    "reference": "Voyager 1, more than 165 AU (about 25 billion km) from Earth as of 2026."
+  },
+  {
+    "id": "history-01",
+    "domain": "history",
+    "question": "Who won the 2022 FIFA World Cup, who did they beat in the final, and how was the final decided?",
+    "reference": "Argentina beat France; the final ended 3-3 after extra time and Argentina won 4-2 on penalties."
+  },
+  {
+    "id": "history-02",
+    "domain": "history",
+    "question": "On what date did the Berlin Wall fall, and what event that evening led to the border crossings opening?",
+    "reference": "9 November 1989; Günter Schabowski mistakenly announced at a press conference that new travel rules took effect immediately, and crowds forced the crossings open."
+  }
+]
