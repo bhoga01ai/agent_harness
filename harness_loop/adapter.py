@@ -116,6 +116,9 @@ class SearchAdapter:
   def task_prompt(self, task_id: str) -> str:
     return self._tasks[task_id]['question']
 
+  def has_reference(self, task_id: str) -> bool:
+    return bool(self._tasks[task_id].get('reference'))
+
   def task_files(self, task_id: str) -> Path | None:
     return None
 
@@ -195,7 +198,9 @@ class SearchAdapter:
     from google import genai
 
     try:
-      reply = genai.Client().models.generate_content(
+      # Keep the client in a variable: an unreferenced one is closed before the call.
+      client = genai.Client()
+      reply = client.models.generate_content(
           model=os.environ.get('HARNESS2_JUDGE_MODEL') or 'gemini-2.5-flash',
           contents=(
               f'Question: {self.task_prompt(task_id)}\n\nReference answer: {reference}\n\n'

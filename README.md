@@ -93,7 +93,7 @@ editor sessions, and the output folder:
 
 ```
 Harness ok: 9 files, 1471 always-on chars, 1 sub-agent(s), 1 skill(s), 2 script(s), a hooks file; agent tools: searcher, load_skill, run_script
-3 task(s), k=1, parallel mode: about 12 agent rollouts and 9 editor sessions -> runs/loop/gemini-2.5-flash
+3 task(s), k=1, parallel mode: about 12 agent rollouts and 12 editor sessions -> runs/loop/gemini-2.5-flash
   history: history-01
   science: science-01
   tech: tech-01
@@ -184,18 +184,21 @@ the base harness, delete `harness/active/`.
 uv run improve-harness --k 1 --mode parallel
 ```
 
-Topic areas run one after another. Within a topic area, tasks run in order, so later tasks
-benefit from what earlier ones learned. If a run stops partway, run the same command again:
+The three topic areas run at the same time (`--workers 3`). Within a topic area, tasks run in
+order, so later tasks benefit from what earlier ones learned; each topic area keeps its own
+lessons, so running them side by side changes nothing about the results. With 6 tasks, a run
+takes about 7 minutes instead of about 20. If a run stops partway, run the same command again:
 finished rollouts, editor sessions and selections are reused.
 
 ### Options
 
 | Option | Default | What it does |
 |---|---|---|
-| `--k N` | `1` | Scale of the search. Each task costs about `4N` agent rollouts and `3N` editor sessions. |
+| `--k N` | `1` | Scale of the search. Each task costs about `4N` agent rollouts and `4N` editor sessions. |
 | `--mode` | `parallel` | `parallel` or `sequential`: how the editor's proposals are combined |
 | `--only-tasks a,b` | all | Run only these task ids from `tasks/search_tasks.json` |
 | `--max-tasks N` | all | Run at most N tasks per topic area |
+| `--workers N` | `3` | Topic areas to run at the same time. Use `1` to run them one after another. |
 | `--dry-run` | off | Validate the harness, print the tasks and the cost, then stop |
 | `--adopt` | off | Copy the best harness into `harness/active/` if it scored higher than base |
 
@@ -214,7 +217,8 @@ area) and a `question`, and optionally a `reference` answer:
 The agent, the editor and the selector never see the references. They are read only at the
 end, when Gemini grades the base and adopted answers for the scoreboard. A task without a
 reference shows `no reference` and cannot count towards adoption. If the grading call fails,
-the task is also shown as ungraded, not as wrong.
+the task shows `not graded: the judge call failed` and is left out of the totals, not counted
+as wrong.
 
 ### Troubleshooting
 
@@ -225,6 +229,7 @@ the task is also shown as ungraded, not as wrong.
 | `Vertex AI is selected but GOOGLE_CLOUD_PROJECT is unset` | Set `GOOGLE_CLOUD_PROJECT` in `.env`. |
 | `the claude CLI is not on PATH` | Install Claude Code and run `claude` once to log in. |
 | `only_tasks names unknown task id(s)` | Use an `id` from `tasks/search_tasks.json`. |
+| `not graded: the judge call failed` | The Gemini grading call errored. Check `GOOGLE_API_KEY` and `HARNESS2_JUDGE_MODEL`, then run the same command again: only the grading is redone. |
 | `No edited harness was selected` | The selector kept the base harness for every task. Try more tasks or a higher `--k`. |
 | `It did not score higher than base` | Nothing was adopted. Review `best_harness/` and `scoreboard.json` to see why. |
 

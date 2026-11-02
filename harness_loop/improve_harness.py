@@ -21,6 +21,7 @@ import argparse
 import json
 import shutil
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -88,6 +89,7 @@ def scoreboard(adapter: SearchAdapter, task_ids: list[str], k: int, mode: str) -
         'harness': str(harness),
         'edited': bool(sel.get('chosen_label')) and not sel.get('chosen_tree_is_base'),
         'why': str(sel.get('why') or '').strip(),
+        'has_reference': adapter.has_reference(tid),
     })
   return rows
 
@@ -127,10 +129,12 @@ def report(adapter: SearchAdapter, rows: list[dict], do_adopt: bool) -> int:
   adopted = sum(r['adopted'] for r in graded)
   print(f'\nScoreboard: base {base:g}/{len(graded)} -> adopted {adopted:g}/{len(graded)}')
   for r in rows:
-    grades = (
-        'no reference' if r['base'] is None or r['adopted'] is None
-        else f"base {r['base']:g} -> adopted {r['adopted']}"
-    )
+    if not r['has_reference']:
+      grades = 'no reference'
+    elif r['base'] is None or r['adopted'] is None:
+      grades = 'not graded: the judge call failed (see HARNESS2_JUDGE_MODEL and your Gemini key)'
+    else:
+      grades = f"base {r['base']:g} -> adopted {r['adopted']}"
     print(f"  {r['task']}: {grades}{'' if r['edited'] else ' (kept base harness)'}")
 
   best = best_harness(rows)
@@ -159,10 +163,11 @@ def main(argv: list[str] | None = None) -> int:
   p = argparse.ArgumentParser(prog='improve-harness', description=__doc__,
                               formatter_class=argparse.RawDescriptionHelpFormatter)
   p.add_argument('--k', type=int, default=1,
-                 help='scale: about 4k rollouts and 3k editor sessions per task')
+                 help='scale: about 4k rollouts and 4k editor sessions per task')
   p.add_argument('--mode', default='parallel', help='parallel | sequential')
   p.add_argument('--only-tasks', default='', help='comma list of task ids')
   p.add_argument('--max-tasks', type=int, default=None, help='per topic area')
+  p.add_argument('--workers', type=int, default=3, help='topic areas to run at the same time')
   p.add_argument('--dry-run', action='store_true',
                  help='validate the harness, print the tasks and cost, and stop')
   p.add_argument('--adopt', action='store_true',
@@ -183,7 +188,7 @@ def main(argv: list[str] | None = None) -> int:
   print(
       f'{len(task_ids)} task(s), k={args.k}, {schedule.MODE_NAMES[mode]} mode: about'
       f' {4 * args.k * len(task_ids)} agent rollouts and'
-      f' {3 * args.k * len(task_ids)} editor sessions -> {adapter.loop_dir}'
+      f' {4 * args.k * len(task_ids)} editor sessions -> {adapter.loop_dir}'
   )
   for domain, tasks in stream.items():
     print(f'  {domain}: {", ".join(tasks)}')
@@ -192,17 +197,21 @@ def main(argv: list[str] | None = None) -> int:
   adapter.preflight()
 
   prop = LocalClaudeProposer(adapter.spec.channels['proposer'], audit_dir=adapter.audit_dir)
-  failed = 0
-  for domain, tasks in stream.items():
-    out = schedule.run_domain(
-        domain, tasks, args.k,
+
+  # Tasks in a topic area run in order, so each learns from the ones before it;
+  # topic areas keep separate lessons, so they can run side by side.
+  def run_domain(domain: str) -> dict:
+    return schedule.run_domain(
+        domain, stream[domain], args.k,
         adapter=adapter,
         prop=prop,
         runs_root=adapter.runs_dir,
         library_root=adapter.runs_dir / '_library',
         modes=(mode,),
     )
-    failed += out['failed']
+
+  with ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
+    failed = sum(out['failed'] for out in pool.map(run_domain, stream))
   report(adapter, scoreboard(adapter, task_ids, args.k, mode), args.adopt)
   return 2 if failed else 0
 
